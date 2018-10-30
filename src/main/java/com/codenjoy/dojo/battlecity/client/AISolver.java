@@ -78,12 +78,12 @@ public class AISolver implements Solver<Board> {
         result.add(directions);
 
         Board copy = board.getCopy();
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 10; i++) {
             Deikstra.ShortestWay simWay = sim(copy);
             if (simWay == null) {
-                result.add(new Deikstra.ShortestWay(Direction.RIGHT, 1D / (i + 2)));
+                result.add(new Deikstra.ShortestWay(Direction.RIGHT, (Math.pow(1.2, (i + 2)))));
             } else {
-                simWay.weight /= 1D / (i + 2);
+                simWay.weight /= (Math.pow(1.2, (i + 2)));
                 result.add(simWay);
             }
         }
@@ -300,7 +300,7 @@ public class AISolver implements Solver<Board> {
     public static void main(String[] args) {
         WebSocketRunner.runClient(
                 // paste here board page url from browser after registration
-                "http://localhost:8080/codenjoy-contest/board/player/kek@lol.com?code=15764545471366816317",
+                "http://localhost:8080/codenjoy-contest/board/player/kek@lol.com?code=1576454547601200491",
                 new AISolver(new RandomDice()),
                 new Board());
     }
