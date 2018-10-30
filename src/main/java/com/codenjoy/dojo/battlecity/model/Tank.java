@@ -150,11 +150,11 @@ public class Tank {
                 changePoint(direction, board, left);
                 break;
             case DOWN:
-                PointImpl down = new PointImpl(this.point.getX(), this.point.getY() + 1);
+                PointImpl down = new PointImpl(this.point.getX(), this.point.getY() - 1);
                 changePoint(direction, board, down);
                 break;
             case UP:
-                PointImpl up = new PointImpl(this.point.getX(), this.point.getY() - 1);
+                PointImpl up = new PointImpl(this.point.getX(), this.point.getY() + 1);
                 changePoint(direction, board, up);
                 break;
         }

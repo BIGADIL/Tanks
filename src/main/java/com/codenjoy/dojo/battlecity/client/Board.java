@@ -106,6 +106,10 @@ public class Board extends AbstractBoard<Elements> {
         return getAt(x, y).equals(Elements.BULLET);
     }
 
+    public boolean isBulletAt(Point point) {
+        return isBulletAt(point.getX(), point.getY());
+    }
+
     /**
      * Есть ли в точке танк
      *

@@ -39,38 +39,8 @@ public class Bullet {
         return new Bullet(this);
     }
 
-    /**
-     * Симулирем полет пули
-     * @param board доска
-     */
-    public void act(final Board board) {
+    void destroyBuild(Board board) {
         Elements element;
-
-        int x = point.getX();
-        int y = point.getY();
-
-        // здесь теперь нет пули
-        board.set(x, y, Elements.NONE.ch);
-
-        // пуля двинулась в направлении движения
-        this.point.change(direction);
-
-        // вылезли за борд - все
-        if (this.point.isOutOf(board.size())) {
-            isDead = true;
-            return;
-        }
-
-        // получим ссылку на танк, который есть в точке вместе с пулей
-        Tank tank = board.tankAt(this.point);
-        if (tank != null) {
-            // танк действительно есть => он умер вместе с пулей
-            tank.sendDead(board);
-            isDead = true;
-            return;
-        }
-
-        // рушим барикады
         switch (direction) {
             case UP:
                 element = board.getAt(this.point);
@@ -189,6 +159,53 @@ public class Bullet {
                         isDead = false;
                 }
                 break;
+        }
+    }
+
+    /**
+     * Симулирем полет пули
+     * @param board доска
+     */
+    public void act(final Board board) {
+
+        for (int i = 0; i < 2; i++) {
+
+            int x = point.getX();
+            int y = point.getY();
+
+            // здесь теперь нет пули
+            board.set(x, y, Elements.NONE.ch);
+
+            // пуля двинулась в направлении движения
+            this.point.change(direction);
+
+            // вылезли за борд - все
+            if (this.point.isOutOf(board.size())) {
+                isDead = true;
+                return;
+            }
+
+            if (board.isBulletAt(point)) {
+                board.set(point.getX(), point.getY(), Elements.NONE.ch);
+                isDead = true;
+                return;
+            }
+
+            // получим ссылку на танк, который есть в точке вместе с пулей
+            Tank tank = board.tankAt(this.point);
+            if (tank != null) {
+                // танк действительно есть => он умер вместе с пулей
+                tank.sendDead(board);
+                isDead = true;
+                board.set(point.getX(), point.getY(), Elements.NONE.ch);
+                return;
+            }
+
+            // рушим барикады
+            destroyBuild(board);
+            if (isDead) {
+                return;
+            }
         }
     }
 }

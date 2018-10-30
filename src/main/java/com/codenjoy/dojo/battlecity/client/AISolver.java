@@ -35,14 +35,14 @@ public class AISolver implements Solver<Board> {
 
     public static final Random rnd = new Random();
 
-    private DeikstraFindWay way;
+    private Deikstra way;
 
     public AISolver(Dice dice) {
-        this.way = new DeikstraFindWay();
+        this.way = new Deikstra();
     }
 
-    public DeikstraFindWay.Possible possible(final Board board) {
-        return new DeikstraFindWay.Possible() {
+    public Deikstra.Possible possible(final Board board) {
+        return new Deikstra.Possible() {
             @Override
             public boolean possible(Point from, Direction where) {
                 int x = from.getX();
@@ -70,11 +70,16 @@ public class AISolver implements Solver<Board> {
     public String get(final Board board) {
 
         if (board.isGameOver()) return act("");
-        List<Direction> result = getDirections(board);
+        List<Deikstra.ShortestWay> result = getDirections(board);
         if (result.isEmpty()) return act(Direction.RIGHT.toString());
 
-        for (int i = 0; i < 50; i++) {
-            result.addAll(sim(board));
+        Board copy = board.getCopy();
+        for (int i = 0; i < 5; i++) {
+            List<Deikstra.ShortestWay> simWays = sim(copy);
+            for (Deikstra.ShortestWay simWay : simWays) {
+                simWay.weight /= (1D / i);
+            }
+            result.addAll(simWays);
         }
 
         Direction action = getAction(result);
@@ -90,44 +95,27 @@ public class AISolver implements Solver<Board> {
 
     /**
      * Накладываем на выбранное направление патч, объезжающий препятствия
+     *
      * @param direction направление
-     * @param board доска
+     * @param board     доска
      * @return направление
      */
     public Direction patchByBarriers(Direction direction, Board board) {
-        int x = board.getMe().getX();
-        int y = board.getMe().getY();
+        Point me = board.getMe();
 
-        // если на нашем пути есть препядствме - объедем его
-        switch (direction) {
-            case RIGHT:
-                if (board.isBarrierAt(x + 1, y )) {
-                    return rnd.nextInt(1) == 0 ? direction.clockwise() : direction.clockwise().inverted();
-                }
-                break;
-            case LEFT:
-                if (board.isBarrierAt(x - 1, y)) {
-                    return rnd.nextInt(1) == 0 ? direction.clockwise() : direction.clockwise().inverted();
-                }
-                break;
-            case DOWN:
-                if (board.isBarrierAt(x, y + 1)) {
-                    return rnd.nextInt(1) == 0 ? direction.clockwise() : direction.clockwise().inverted();
-                }
-                break;
-            case UP:
-                if (board.isBarrierAt(x, y - 1)) {
-                    return rnd.nextInt(1) == 0 ? direction.clockwise() : direction.clockwise().inverted();
-                }
-                break;
+        Deikstra.Possible possible = possible(board);
+
+        if (!possible.possible(me, direction)) {
+            return rnd.nextInt(1) == 0 ? direction.clockwise() : direction.clockwise().inverted();
         }
         return direction;
     }
 
     /**
      * Накладываем на выбранное направление патч, связанный с танком
+     *
      * @param direction направление
-     * @param board доска
+     * @param board     доска
      * @return направление
      * @// TODO: 29.10.2018 не всегда отрабатывает
      */
@@ -140,64 +128,87 @@ public class AISolver implements Solver<Board> {
         } else if (board.isOtherTankAt(x - 1, y)) {
             return Direction.LEFT;
         } else if (board.isOtherTankAt(x, y - 1)) {
-            return Direction.UP;
-        } else if (board.isOtherTankAt(x, y + 1)) {
             return Direction.DOWN;
+        } else if (board.isOtherTankAt(x, y + 1)) {
+            return Direction.UP;
         }
         return direction;
     }
 
     /**
      * Накладываем на выбранное направление патч, связанный с пулями
+     *
      * @param direction направление
-     * @param board доска
+     * @param board     доска
      * @return направление
      * @// TODO: 29.10.2018 не всегда отрабатывает
      */
     public Direction patchByBullet(Direction direction, Board board) {
-        int x = board.getMe().getX();
-        int y = board.getMe().getY();
-        if (board.isAt(x + 1, y, Elements.BULLET)) {
-            return Direction.DOWN;
-        } else if (board.isAt(x - 1, y, Elements.BULLET)) {
-            return Direction.UP;
-        } else if (board.isAt(x, y - 1, Elements.BULLET)) {
-            return Direction.LEFT;
-        } else if (board.isAt(x, y + 1, Elements.BULLET)) {
-            return Direction.RIGHT;
+        Point me = board.getMe();
+        int x = me.getX();
+        int y = me.getY();
+
+        int size = board.size();
+
+        Deikstra.Possible possible = possible(board);
+
+        int delta1 = 1;
+        int delta2 = 2;
+
+        PointImpl pointRight = new PointImpl(x + delta1, y);
+        PointImpl point2xRight = new PointImpl(x + delta2, y);
+
+        PointImpl pointLeft = new PointImpl(x - delta1, y);
+        PointImpl point2xLeft = new PointImpl(x - delta2, y);
+
+        PointImpl pointUp = new PointImpl(x, y + delta1);
+        PointImpl point2xUp = new PointImpl(x , y + delta2);
+
+        PointImpl pointDown = new PointImpl(x, y - delta1);
+        PointImpl point2xDown = new PointImpl(x, y - delta2);
+
+        if (board.isBulletAt(pointRight) || (!point2xRight.isOutOf(size) && board.isBulletAt(point2xRight))) {
+            return possible.possible(me, Direction.DOWN) ? Direction.DOWN : Direction.UP;
+        } else if (board.isBulletAt(pointLeft) || (!point2xLeft.isOutOf(size) && board.isBulletAt(point2xLeft))) {
+            return possible.possible(me, Direction.UP) ? Direction.UP : Direction.DOWN;
+        } else if (board.isBulletAt(pointUp) || (!point2xUp.isOutOf(size) && board.isBulletAt(point2xUp))) {
+            return possible.possible(me, Direction.LEFT) ? Direction.LEFT : Direction.RIGHT;
+        } else if (board.isBulletAt(pointDown) || (!point2xDown.isOutOf(size) && board.isBulletAt(point2xDown))) {
+            return possible.possible(me, Direction.RIGHT) ? Direction.RIGHT : Direction.LEFT;
         }
         return direction;
     }
 
     /**
      * Получить наиболее часто встречающееся направление из списка направлений.
-     * @param directions напраления
+     *
+     * @param weightedDirections напраления
      * @return наиболее частое направление
      */
-    public Direction getAction(List<Direction> directions) {
-        long[] probs = new long[4];
-        for (Direction d : directions) {
-            switch (d) {
+    public Direction getAction(List<Deikstra.ShortestWay> weightedDirections) {
+        double[] directionWeight = new double[4];
+        for (final Deikstra.ShortestWay direction : weightedDirections) {
+            switch (direction.direction) {
                 case UP:
-                    probs[0]++;
+                    directionWeight[0]++;
                     break;
                 case DOWN:
-                    probs[1]++;
+                    directionWeight[1]++;
                     break;
                 case LEFT:
-                    probs[2]++;
+                    directionWeight[2]++;
                     break;
                 case RIGHT:
-                    probs[3]++;
+                    directionWeight[3]++;
                     break;
             }
         }
 
-        if (probs[0] > probs[1] && probs[0] > probs[2] && probs[0] > probs[3]) {
+        if (directionWeight[0] > directionWeight[1] && directionWeight[0] > directionWeight[2] && directionWeight[0] > directionWeight[3]) {
             return Direction.UP;
-        } else if (probs[1] > probs[2] && probs[1] > probs[3]) {
+        } else if (directionWeight[1] > directionWeight[2] && directionWeight[1] > directionWeight[3]) {
             return Direction.DOWN;
-        } else if (probs[2] > probs[3]) {
+        } else if (directionWeight[2] > directionWeight[3]) {
             return Direction.LEFT;
         }
         return Direction.RIGHT;
@@ -209,10 +220,11 @@ public class AISolver implements Solver<Board> {
 
     /**
      * Получить направления по кратчайшим путям до вражеских танков.
+     *
      * @param board доска
      * @return направления
      */
-    public List<Direction> getDirections(Board board) {
+    public List<Deikstra.ShortestWay> getDirections(Board board) {
         int size = board.size();
         Point from = board.getMe();
         List<Point> to = board.get(Elements.AI_TANK_DOWN,
@@ -223,17 +235,18 @@ public class AISolver implements Solver<Board> {
                 Elements.OTHER_TANK_LEFT,
                 Elements.OTHER_TANK_RIGHT,
                 Elements.OTHER_TANK_UP);
-        DeikstraFindWay.Possible map = possible(board);
-        return way.getShortestWay(size, from, to, map);
+        Deikstra.Possible map = possible(board);
+        return way.getShortestWays(size, from, to, map);
     }
 
     /**
      * Для данного танка получить направления кратчайших путей до врагов
+     *
      * @param board доска
-     * @param tank танк
+     * @param tank  танк
      * @return кратчайщие пути
      */
-    public List<Direction> getDirections(Board board, Tank tank) {
+    public List<Deikstra.ShortestWay> getDirections(Board board, Tank tank) {
         int size = board.size();
         Point from = tank.getPoint();
         List<Point> to = board.get(Elements.AI_TANK_DOWN,
@@ -248,19 +261,23 @@ public class AISolver implements Solver<Board> {
                 Elements.TANK_UP,
                 Elements.TANK_LEFT,
                 Elements.TANK_RIGHT);
-        DeikstraFindWay.Possible map = possible(board);
-        return way.getShortestWay(size, from, to, map);
+        Deikstra.Possible map = possible(board);
+
+        to.removeIf(point -> point.getX() == from.getX() && point.getY() == from.getY());
+
+        return way.getShortestWays(size, from, to, map);
     }
 
     /**
      * Просимулировать игровой ход
+     *
      * @param board доска
      * @return кратчайщие направления для нашего танка на данном ходу
      */
-    public List<Direction> sim(final Board board) {
+    public List<Deikstra.ShortestWay> sim(final Board board) {
         for (Tank tank : board.tanks) {
             // танки выбирают лучший из путей по Дейкстре
-            List<Direction> directions = getDirections(board, tank);
+            List<Deikstra.ShortestWay> directions = getDirections(board, tank);
             Direction action = getAction(directions);
             tank.act(action, board);
         }
