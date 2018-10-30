@@ -70,16 +70,22 @@ public class AISolver implements Solver<Board> {
     public String get(final Board board) {
 
         if (board.isGameOver()) return act("");
-        List<Deikstra.ShortestWay> result = getDirections(board);
-        if (result.isEmpty()) return act(Direction.RIGHT.toString());
+        List<Deikstra.ShortestWay> result = new LinkedList<>();
+        Deikstra.ShortestWay directions = getDirections(board);
+        if (directions == null) {
+            return act(Direction.RIGHT.toString());
+        }
+        result.add(directions);
 
         Board copy = board.getCopy();
-        for (int i = 0; i < 5; i++) {
-            List<Deikstra.ShortestWay> simWays = sim(copy);
-            for (Deikstra.ShortestWay simWay : simWays) {
-                simWay.weight /= (1D / i);
+        for (int i = 0; i < 20; i++) {
+            Deikstra.ShortestWay simWay = sim(copy);
+            if (simWay == null) {
+                result.add(new Deikstra.ShortestWay(Direction.RIGHT, 1D / (i + 2)));
+            } else {
+                simWay.weight /= 1D / (i + 2);
+                result.add(simWay);
             }
-            result.addAll(simWays);
         }
 
         Direction action = getAction(result);
@@ -224,7 +230,7 @@ public class AISolver implements Solver<Board> {
      * @param board доска
      * @return направления
      */
-    public List<Deikstra.ShortestWay> getDirections(Board board) {
+    public Deikstra.ShortestWay getDirections(Board board) {
         int size = board.size();
         Point from = board.getMe();
         List<Point> to = board.get(Elements.AI_TANK_DOWN,
@@ -236,7 +242,7 @@ public class AISolver implements Solver<Board> {
                 Elements.OTHER_TANK_RIGHT,
                 Elements.OTHER_TANK_UP);
         Deikstra.Possible map = possible(board);
-        return way.getShortestWays(size, from, to, map);
+        return way.getShortestWay(size, from, to, map);
     }
 
     /**
@@ -246,7 +252,7 @@ public class AISolver implements Solver<Board> {
      * @param tank  танк
      * @return кратчайщие пути
      */
-    public List<Deikstra.ShortestWay> getDirections(Board board, Tank tank) {
+    public Deikstra.ShortestWay getDirections(Board board, Tank tank) {
         int size = board.size();
         Point from = tank.getPoint();
         List<Point> to = board.get(Elements.AI_TANK_DOWN,
@@ -265,7 +271,7 @@ public class AISolver implements Solver<Board> {
 
         to.removeIf(point -> point.getX() == from.getX() && point.getY() == from.getY());
 
-        return way.getShortestWays(size, from, to, map);
+        return way.getShortestWay(size, from, to, map);
     }
 
     /**
@@ -274,12 +280,15 @@ public class AISolver implements Solver<Board> {
      * @param board доска
      * @return кратчайщие направления для нашего танка на данном ходу
      */
-    public List<Deikstra.ShortestWay> sim(final Board board) {
+    public Deikstra.ShortestWay sim(final Board board) {
         for (Tank tank : board.tanks) {
             // танки выбирают лучший из путей по Дейкстре
-            List<Deikstra.ShortestWay> directions = getDirections(board, tank);
-            Direction action = getAction(directions);
-            tank.act(action, board);
+            Deikstra.ShortestWay directions = getDirections(board, tank);
+            if (directions != null) {
+                tank.act(directions.direction, board);
+            } else {
+                tank.act(Direction.RIGHT, board);
+            }
         }
         for (Tank tank : board.tanks) {
             tank.actBullets(board);

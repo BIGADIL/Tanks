@@ -39,7 +39,7 @@ public class Bullet {
         return new Bullet(this);
     }
 
-    void destroyBuild(Board board) {
+    private void destroyBuild(Board board) {
         Elements element;
         switch (direction) {
             case UP:

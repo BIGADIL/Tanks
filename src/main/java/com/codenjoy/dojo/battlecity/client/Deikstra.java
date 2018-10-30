@@ -17,7 +17,7 @@ public class Deikstra {
         final Direction direction;
         double weight;
 
-        public ShortestWay(Direction direction, int weight) {
+        public ShortestWay(Direction direction, double weight) {
             this.direction = direction;
             this.weight = weight;
         }
@@ -55,7 +55,7 @@ public class Deikstra {
         return paths;
     }
 
-    public List<Direction> getShortestWay(int size, Point from, List<Point> goals, Deikstra.Possible possible) {
+    public ShortestWay getShortestWay(int size, Point from, List<Point> goals, Deikstra.Possible possible) {
         this.size = size;
         this.possible = possible;
         this.setupPossibleWays();
@@ -83,13 +83,13 @@ public class Deikstra {
         }
 
         if (paths.isEmpty()) {
-            return Collections.emptyList();
+            return null;
         } else {
             shortest = paths.get(indexMin);
             if (shortest.size() == 0) {
-                return Collections.emptyList();
+                return null;
             } else {
-                return shortest;
+                return new ShortestWay(shortest.get(0), shortest.size());
             }
         }
     }
