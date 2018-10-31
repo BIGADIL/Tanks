@@ -2,6 +2,7 @@ package com.codenjoy.dojo.battlecity.model;
 
 import com.codenjoy.dojo.battlecity.client.AISolver;
 import com.codenjoy.dojo.battlecity.client.Board;
+import com.codenjoy.dojo.battlecity.client.Deikstra;
 import com.codenjoy.dojo.services.Direction;
 import com.codenjoy.dojo.services.PointImpl;
 
@@ -75,7 +76,7 @@ public class Tank {
         point = new PointImpl(tank.point.getX(), tank.point.getY());
         tankType = tank.tankType;
         bullets = new ArrayList<>(tank.bullets);
-        tmpBullet = tank.tmpBullet.getCopy();
+        tmpBullet = tank.tmpBullet == null ? null : tank.tmpBullet.getCopy();
     }
 
     public Tank getCopy() {
@@ -106,7 +107,20 @@ public class Tank {
      * @// TODO: 29.10.2018 Здесь респ идет на произвольной точке поля, где могут быть другие танчики.
      */
     public void sendDead(final Board board) {
-        point.move(new PointImpl(AISolver.rnd.nextInt(board.size()), AISolver.rnd.nextInt(board.size())));
+
+        board.set(point.getX(), point.getY(), Elements.NONE.ch);
+
+        while (true) {
+
+            PointImpl point = new PointImpl(new PointImpl(AISolver.rnd.nextInt(board.size()), AISolver.rnd.nextInt(board.size())));
+            int y = point.getY();
+            int x = point.getX();
+            if (!board.isBarrierAt(x, y) && !board.isOtherTankAt(x, y) && !board.isBulletAt(x, y) && !board.isMeAt(x, y)) {
+                this.point.move(point);
+                board.set(point.getX(), point.getY(), tankType.left.ch);
+                break;
+            }
+        }
     }
 
     /**
@@ -114,23 +128,30 @@ public class Tank {
      *
      * @param direction направление
      * @param board     доска
-     * @param point     точка, в которую едет танк
      */
-    private void changePoint(final Direction direction, final Board board, final PointImpl point) {
-        int x = this.point.getX();
-        int y = this.point.getY();
-        // едем в точку только при отсутствии барьеров и если она не выходит за границы поля
-        if (!board.isBarrierAt(point) && !point.isOutOf(board.size())) {
-            this.point.move(point);
+    private Direction changePoint(final Direction direction, final Board board) {
+
+        int x = point.getX();
+        int y = point.getY();
+
+        PointImpl tmpPoint = new PointImpl(point.getX(), point.getY());
+        tmpPoint.change(direction);
+
+        Deikstra.Possible possible = AISolver.possible(board);
+
+        if (possible.possible(point, direction)) {
+            board.set(x, y, Elements.NONE.ch);
+            point.change(direction);
             board.set(point.getX(), point.getY(), tankType.byDirection(direction).ch);
+            return direction;
         } else {
-            // иначе тупо едем перпендикулярно заданному направлению в произвольную сторону
-            final Direction newDirection = AISolver.rnd.nextInt(1) == 0 ? direction.clockwise() : direction.clockwise().inverted();
-            this.point.change(newDirection);
-            board.set(point.getX(), point.getY(), tankType.byDirection(newDirection).ch);
+            System.out.println("TANK OUT: " + tankType.right);
+            board.set(x, y, Elements.NONE.ch);
+            point.change(direction.inverted());
+            board.set(point.getX(), point.getY(), tankType.byDirection(direction.inverted()).ch);
+            return direction.inverted();
         }
-        // обнуляем поле - теперь там нет танка.
-        board.set(x, y, Elements.NONE.ch);
+
     }
 
     /**
@@ -140,30 +161,15 @@ public class Tank {
      * @param board     доска
      */
     public void act(final Direction direction, final Board board) {
-        switch (direction) {
-            case RIGHT:
-                PointImpl right = new PointImpl(this.point.getX() + 1, this.point.getY());
-                changePoint(direction, board, right);
-                break;
-            case LEFT:
-                PointImpl left = new PointImpl(this.point.getX() - 1, this.point.getY());
-                changePoint(direction, board, left);
-                break;
-            case DOWN:
-                PointImpl down = new PointImpl(this.point.getX(), this.point.getY() - 1);
-                changePoint(direction, board, down);
-                break;
-            case UP:
-                PointImpl up = new PointImpl(this.point.getX(), this.point.getY() + 1);
-                changePoint(direction, board, up);
-                break;
-        }
-        // создаем пульку в направлении движения
-        tmpBullet = new Bullet(point, direction);
+
+        tmpBullet = new Bullet(point, changePoint(direction, board));
+
+        System.out.println(board.toString());
     }
 
     /**
      * Получить положение танка
+     *
      * @return положение танка
      */
     public PointImpl getPoint() {

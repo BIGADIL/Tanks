@@ -170,17 +170,22 @@ public class Bullet {
 
         for (int i = 0; i < 2; i++) {
 
+            System.out.println(i);
+
             int x = point.getX();
             int y = point.getY();
 
             // здесь теперь нет пули
-            board.set(x, y, Elements.NONE.ch);
+            if (!point.isOutOf(board.size())) {
+                board.set(x, y, Elements.NONE.ch);
+            }
 
             // пуля двинулась в направлении движения
             this.point.change(direction);
 
             // вылезли за борд - все
-            if (this.point.isOutOf(board.size())) {
+            if (point.isOutOf(board.size())) {
+                System.out.println("out");
                 isDead = true;
                 return;
             }

@@ -41,6 +41,10 @@ public class Board extends AbstractBoard<Elements> {
     public ArrayList<Tank> tanks = new ArrayList<>();
 
     public Board() {
+    }
+
+    public void associateTanks() {
+        tanks.clear();
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 PointImpl point = new PointImpl(i, j);
@@ -53,6 +57,7 @@ public class Board extends AbstractBoard<Elements> {
                 }
             }
         }
+        System.out.println("Tanks:" + tanks.size());
     }
 
     @Override
@@ -89,10 +94,10 @@ public class Board extends AbstractBoard<Elements> {
     }
 
     public Point getMe() {
-        return get(Elements.TANK_UP,
-                Elements.TANK_DOWN,
-                Elements.TANK_LEFT,
-                Elements.TANK_RIGHT).get(0);
+
+        List<Point> points = get(Elements.TANK_UP, Elements.TANK_DOWN, Elements.TANK_LEFT, Elements.TANK_RIGHT);
+
+        return points.isEmpty() ? null : points.get(0);
     }
 
     public boolean isGameOver() {
@@ -139,6 +144,13 @@ public class Board extends AbstractBoard<Elements> {
                 Elements.OTHER_TANK_LEFT,
                 Elements.OTHER_TANK_RIGHT,
                 Elements.OTHER_TANK_UP);
+    }
+
+    public boolean isMeAt(int x, int y) {
+        return isAt(x, y, Elements.TANK_DOWN,
+                Elements.TANK_LEFT,
+                Elements.TANK_RIGHT,
+                Elements.TANK_UP);
     }
 
     /**

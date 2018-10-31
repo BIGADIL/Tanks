@@ -12,7 +12,7 @@ public class Deikstra {
     private int size;
     private Deikstra.Possible possible;
 
-    public static class ShortestWay {
+    public static class ShortestWay implements Comparable<ShortestWay>{
 
         final Direction direction;
         double weight;
@@ -20,6 +20,11 @@ public class Deikstra {
         public ShortestWay(Direction direction, double weight) {
             this.direction = direction;
             this.weight = weight;
+        }
+
+        @Override
+        public int compareTo(ShortestWay o) {
+            return (int) (weight - o.weight);
         }
     }
 
@@ -31,25 +36,24 @@ public class Deikstra {
         this.possible = possible;
         this.setupPossibleWays();
         LinkedList<ShortestWay> paths = new LinkedList<>();
-        Iterator var6 = goals.iterator();
-
-        LinkedList<Direction> shortest;
 
         Map<Point, LinkedList<Direction>> pathToAllPoints = getPath(from);
 
-        int totalWeight = 0;
         for (final Point goal : goals) {
             LinkedList<Direction> directions = pathToAllPoints.get(goal);
             if (directions != null && !directions.isEmpty()) {
                 int weight = directions.size();
-                totalWeight += weight;
                 ShortestWay shortestWay = new ShortestWay(directions.get(0), weight);
                 paths.add(shortestWay);
             }
         }
 
+        Collections.sort(paths);
+
+        System.out.println("Ways");
+
         for (ShortestWay path : paths) {
-            path.weight = (double) totalWeight / path.weight;
+            System.out.println(path.direction + ": " + path.weight);
         }
 
         return paths;
@@ -112,6 +116,9 @@ public class Deikstra {
             }
 
             LinkedList<Direction> before = path.get(current);
+            if (possibleWays == null) {
+                System.out.println("PossibleWays null");
+            }
             Iterator var7 = ((List)this.possibleWays.get(current)).iterator();
 
             while(true) {
