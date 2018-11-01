@@ -90,6 +90,7 @@ public class Tank {
      */
     public void actBullets(final Board board) {
         for (Bullet bullet : bullets) {
+            if (bullet == null) continue;
             bullet.act(board);
             // Пуля отжила - установим ее в null
             if (bullet.isDead) bullet = null;

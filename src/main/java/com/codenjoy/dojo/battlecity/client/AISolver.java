@@ -94,23 +94,23 @@ public class AISolver implements Solver<Board> {
         }
 
 
-        Board copy = board.getCopy();
-        for (int i = 0; i < 5; i++) {
-            System.err.println(i);
-            List<Deikstra.ShortestWay> simWays = simNextStage(copy);
-            if (simWays == null) {
-                continue;
-            } else {
-                for (Deikstra.ShortestWay direction : simWays) {
-                    direction.weight = 1D / direction.weight;
-                    totalWeight += direction.weight;
-                }
-
-                for (Deikstra.ShortestWay direction : simWays) {
-                    direction.weight /= (totalWeight * (1.5 * (i + 1)));
-                }
-            }
-        }
+//        Board copy = board.getCopy();
+//        for (int i = 0; i < 5; i++) {
+//            System.err.println(i);
+//            List<Deikstra.ShortestWay> simWays = simNextStage(copy);
+//            if (simWays == null) {
+//                continue;
+//            } else {
+//                for (Deikstra.ShortestWay direction : simWays) {
+//                    direction.weight = 1D / direction.weight;
+//                    totalWeight += direction.weight;
+//                }
+//
+//                for (Deikstra.ShortestWay direction : simWays) {
+//                    direction.weight /= (totalWeight * (1.5 * (i + 1)));
+//                }
+//            }
+//        }
 
         Direction action = getAction(directions);
 
@@ -141,9 +141,57 @@ public class AISolver implements Solver<Board> {
         int delta1 = 1;
         int delta2 = 2;
 
+
+
+        if (board.isBulletAt(x + delta1, y)) {
+            boolean possibleLeft = possible.possible(me, Direction.LEFT);
+            boolean possibleRight = possible.possible(me, Direction.RIGHT);
+            if (possibleLeft && possibleRight) {
+                return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+            } else if (possibleLeft) {
+                return Direction.LEFT;
+            } else if (possibleRight) {
+                return Direction.RIGHT;
+            }
+            return Direction.UP;
+        } else if (board.isBulletAt(x - delta1, y)) {
+            boolean possibleLeft = possible.possible(me, Direction.LEFT);
+            boolean possibleRight = possible.possible(me, Direction.RIGHT);
+            if (possibleLeft && possibleRight) {
+                return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+            } else if (possibleLeft) {
+                return Direction.LEFT;
+            } else if (possibleRight) {
+                return Direction.RIGHT;
+            }
+            return Direction.DOWN;
+        } else if (board.isBulletAt(x, y - delta1)) {
+            boolean possibleUp = possible.possible(me, Direction.UP);
+            boolean possibleDown = possible.possible(me, Direction.DOWN);
+            if (possibleUp && possibleDown) {
+                return rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
+            } else if (possibleUp) {
+                return Direction.UP;
+            } else if (possibleDown) {
+                return Direction.DOWN;
+            }
+            return Direction.RIGHT;
+        } else if (board.isBulletAt(x, y + delta1)) {
+            boolean possibleUp = possible.possible(me, Direction.UP);
+            boolean possibleDown = possible.possible(me, Direction.DOWN);
+            if (possibleUp && possibleDown) {
+                return rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
+            } else if (possibleUp) {
+                return Direction.UP;
+            } else if (possibleDown) {
+                return Direction.DOWN;
+            }
+            return Direction.LEFT;
+        }
+
         switch (direction) {
             case DOWN:
-                if (board.isBulletAt(x + delta1, y) || (!new PointImpl(x + delta2, y).isOutOf(size) && board.isBulletAt(x + delta2, y))) {
+                if ((!new PointImpl(x + delta2, y).isOutOf(size) && board.isBulletAt(x + delta2, y))) {
                     boolean possibleLeft = possible.possible(me, Direction.LEFT);
                     boolean possibleRight = possible.possible(me, Direction.RIGHT);
                     if (possibleLeft && possibleRight) {
@@ -156,7 +204,7 @@ public class AISolver implements Solver<Board> {
                     return Direction.UP;
                 }
             case UP:
-                if (board.isBulletAt(x - delta1, y) || (!new PointImpl(x - delta2, y).isOutOf(size) && board.isBulletAt(x - delta2, y))) {
+                if ((!new PointImpl(x - delta2, y).isOutOf(size) && board.isBulletAt(x - delta2, y))) {
                     boolean possibleLeft = possible.possible(me, Direction.LEFT);
                     boolean possibleRight = possible.possible(me, Direction.RIGHT);
                     if (possibleLeft && possibleRight) {
@@ -311,6 +359,11 @@ public class AISolver implements Solver<Board> {
      */
     public List<Deikstra.ShortestWay> simNextStage(final Board board) {
         for (Tank tank : board.tanks) {
+
+            if (tank.tankType == Tank.TankType.OUR) {
+                continue;
+            }
+
             // танки выбирают лучший из путей по Дейкстре
             List<Deikstra.ShortestWay> directions = getDirections(board, tank);
             if (directions != null && !directions.isEmpty()) {
@@ -322,10 +375,6 @@ public class AISolver implements Solver<Board> {
         for (Tank tank : board.tanks) {
             tank.actBullets(board);
         }
-
-        if (board.getMe() == null) {
-            return new ArrayList<>();
-        }
         // мы получаем все возможные кратчайшие пути
         return getDirections(board);
     }
@@ -334,7 +383,7 @@ public class AISolver implements Solver<Board> {
     public static void main(String[] args) {
         WebSocketRunner.runClient(
                 // paste here board page url from browser after registration
-                "http://localhost:8080/codenjoy-contest/board/player/mater_1234@mail.ru?code=2087931698601200491",
+                "http://localhost:8080/codenjoy-contest/board/player/lol@kek.com?code=2692204611366816317",
                 new AISolver(new RandomDice()),
                 new Board());
     }
