@@ -150,6 +150,10 @@ public class Board extends AbstractBoard<Elements> {
                 Elements.OTHER_TANK_UP);
     }
 
+    public boolean isOtherTankAt(Point point) {
+        return isOtherTankAt(point.getX(), point.getY());
+    }
+
 
     public boolean isAnyTankAt(int x, int y) {
         return isAt(x, y, Elements.AI_TANK_DOWN,
@@ -164,6 +168,10 @@ public class Board extends AbstractBoard<Elements> {
                 Elements.TANK_LEFT,
                 Elements.TANK_RIGHT,
                 Elements.TANK_UP);
+    }
+
+    public boolean isAnyTankAt(Point point) {
+        return isAnyTankAt(point.getX(), point.getY());
     }
 
     public boolean isMeAt(int x, int y) {
