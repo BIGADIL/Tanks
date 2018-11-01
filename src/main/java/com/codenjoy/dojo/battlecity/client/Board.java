@@ -58,6 +58,10 @@ public class Board extends AbstractBoard<Elements> {
             }
         }
         System.out.println("Tanks:" + tanks.size());
+
+        System.err.println(field.length);
+        System.err.println(field[0].length);
+        System.err.println(field[0][0].length);
     }
 
     @Override
@@ -146,11 +150,70 @@ public class Board extends AbstractBoard<Elements> {
                 Elements.OTHER_TANK_UP);
     }
 
+
+    public boolean isAnyTankAt(int x, int y) {
+        return isAt(x, y, Elements.AI_TANK_DOWN,
+                Elements.AI_TANK_LEFT,
+                Elements.AI_TANK_RIGHT,
+                Elements.AI_TANK_UP,
+                Elements.OTHER_TANK_DOWN,
+                Elements.OTHER_TANK_LEFT,
+                Elements.OTHER_TANK_RIGHT,
+                Elements.OTHER_TANK_UP,
+                Elements.TANK_DOWN,
+                Elements.TANK_LEFT,
+                Elements.TANK_RIGHT,
+                Elements.TANK_UP);
+    }
+
     public boolean isMeAt(int x, int y) {
         return isAt(x, y, Elements.TANK_DOWN,
                 Elements.TANK_LEFT,
                 Elements.TANK_RIGHT,
                 Elements.TANK_UP);
+    }
+
+    public boolean isAITank(int x, int y) {
+        return isAt(x, y, Elements.AI_TANK_DOWN,
+                Elements.AI_TANK_LEFT,
+                Elements.AI_TANK_RIGHT,
+                Elements.AI_TANK_UP);
+    }
+
+    public boolean isOtherTank(int x, int y) {
+        return isAt(x, y,
+                Elements.OTHER_TANK_DOWN,
+                Elements.OTHER_TANK_LEFT,
+                Elements.OTHER_TANK_RIGHT,
+                Elements.OTHER_TANK_UP);
+    }
+
+    public boolean isRightTank(int x, int y) {
+        return isAt(x, y,
+                Elements.AI_TANK_RIGHT,
+                Elements.OTHER_TANK_RIGHT,
+                Elements.TANK_RIGHT);
+    }
+
+    public boolean isLeftTank(int x, int y) {
+        return isAt(x, y,
+                Elements.AI_TANK_LEFT,
+                Elements.OTHER_TANK_LEFT,
+                Elements.TANK_LEFT);
+    }
+
+    public boolean isUpTank(int x, int y) {
+        return isAt(x, y,
+                Elements.AI_TANK_UP,
+                Elements.OTHER_TANK_UP,
+                Elements.TANK_UP);
+    }
+
+    public boolean isDownTank(int x, int y) {
+        return isAt(x, y,
+                Elements.AI_TANK_DOWN,
+                Elements.OTHER_TANK_DOWN,
+                Elements.TANK_DOWN);
     }
 
     /**
@@ -165,7 +228,6 @@ public class Board extends AbstractBoard<Elements> {
         for (int i = 0; i < field.length; i++) {
             board.field[i] = new char[field[i].length][];
             for (int j = 0; j < field[i].length; j++) {
-
                 board.field[i][j] = new char[field[i][j].length];
             }
         }

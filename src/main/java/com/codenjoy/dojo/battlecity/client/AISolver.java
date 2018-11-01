@@ -22,6 +22,7 @@ package com.codenjoy.dojo.battlecity.client;
  * #L%
  */
 
+import com.codenjoy.dojo.battlecity.model.Bullet;
 import com.codenjoy.dojo.battlecity.model.Elements;
 import com.codenjoy.dojo.battlecity.model.Tank;
 import com.codenjoy.dojo.client.Solver;
@@ -35,6 +36,8 @@ public class AISolver implements Solver<Board> {
     public static final Random rnd = new Random();
 
     private Deikstra way;
+
+    private final ArrayList<Bullet> bullets = new ArrayList<>();
 
     public AISolver(Dice dice) {
         this.way = new Deikstra();
@@ -68,20 +71,31 @@ public class AISolver implements Solver<Board> {
     @Override
     public String get(final Board board) {
 
+        board.associateTanks();
+
         if (board.isGameOver()) return act("");
 
-        board.associateTanks();
+        for (Bullet bullet : bullets) {
+            bullet.Acted(board);
+        }
+        bullets.removeIf(x -> x.isDead);
+
+        rememberBullets(board);
 
         List<Deikstra.ShortestWay> directions = getDirections(board);
         if (directions == null || directions.isEmpty()) {
-            return act(Direction.RIGHT.toString());
+            return act(Direction.LEFT.toString());
         }
 
-        if (directions.get(0).weight <= 5) {
+        if (directions.get(0).weight <= 7) {
             Direction action = directions.get(0).direction;
             action = patchByBullet(action, board);
             return act(action.toString());
         }
+
+        Board copy = board.getCopy();
+        List<Deikstra.ShortestWay> simWays = simNextStage(copy);
+        directions.addAll(simWays);
 
         double totalWeight = 0;
         for (Deikstra.ShortestWay direction : directions) {
@@ -93,25 +107,6 @@ public class AISolver implements Solver<Board> {
             direction.weight /= totalWeight;
         }
 
-
-//        Board copy = board.getCopy();
-//        for (int i = 0; i < 5; i++) {
-//            System.err.println(i);
-//            List<Deikstra.ShortestWay> simWays = simNextStage(copy);
-//            if (simWays == null) {
-//                continue;
-//            } else {
-//                for (Deikstra.ShortestWay direction : simWays) {
-//                    direction.weight = 1D / direction.weight;
-//                    totalWeight += direction.weight;
-//                }
-//
-//                for (Deikstra.ShortestWay direction : simWays) {
-//                    direction.weight /= (totalWeight * (1.5 * (i + 1)));
-//                }
-//            }
-//        }
-
         Direction action = getAction(directions);
 
         action = patchByBullet(action, board);
@@ -119,6 +114,38 @@ public class AISolver implements Solver<Board> {
         return act(action.toString());
     }
 
+
+
+    public void rememberBullets(Board board) {
+
+        for (int x = 0; x < board.size(); x++) {
+            for (int y = 0; y < board.size(); y++) {
+                if (board.isBulletAt(x, y)) {
+                    boolean isExist = false;
+                    for (Bullet bullet : bullets) {
+                        if (bullet.point.getX() == x && bullet.point.getY() == y) {
+                            isExist = true;
+                            break;
+                        }
+                    }
+                    if (!isExist) {
+                        if (board.isAnyTankAt(x + 1, y)) {
+                            bullets.add(new Bullet(x, y, Direction.LEFT));
+                        } else if (board.isAnyTankAt(x - 1, y)) {
+                            bullets.add(new Bullet(x, y, Direction.RIGHT));
+                        } else if (board.isAnyTankAt(x, y + 1)) {
+                            bullets.add(new Bullet(x, y, Direction.UP));
+                        } else if (board.isAnyTankAt(x, y - 1)) {
+                            bullets.add(new Bullet(x, y, Direction.DOWN));
+                        } else {
+                            System.err.println("AAAAAA");
+                            bullets.add(new Bullet(x, y, Direction.DOWN));
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 
     /**
@@ -141,107 +168,279 @@ public class AISolver implements Solver<Board> {
         int delta1 = 1;
         int delta2 = 2;
 
+        boolean possibleLeft = possible.possible(me, Direction.LEFT);
+        boolean possibleRight = possible.possible(me, Direction.RIGHT);
+        boolean possibleUp = possible.possible(me, Direction.UP);
+        boolean possibleDown = possible.possible(me, Direction.DOWN);
 
+        Bullet bullet = null;
 
-        if (board.isBulletAt(x + delta1, y)) {
-            boolean possibleLeft = possible.possible(me, Direction.LEFT);
-            boolean possibleRight = possible.possible(me, Direction.RIGHT);
-            if (possibleLeft && possibleRight) {
-                return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
-            } else if (possibleLeft) {
-                return Direction.LEFT;
-            } else if (possibleRight) {
-                return Direction.RIGHT;
-            }
-            return Direction.UP;
-        } else if (board.isBulletAt(x - delta1, y)) {
-            boolean possibleLeft = possible.possible(me, Direction.LEFT);
-            boolean possibleRight = possible.possible(me, Direction.RIGHT);
-            if (possibleLeft && possibleRight) {
-                return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
-            } else if (possibleLeft) {
-                return Direction.LEFT;
-            } else if (possibleRight) {
-                return Direction.RIGHT;
-            }
-            return Direction.DOWN;
-        } else if (board.isBulletAt(x, y - delta1)) {
-            boolean possibleUp = possible.possible(me, Direction.UP);
-            boolean possibleDown = possible.possible(me, Direction.DOWN);
-            if (possibleUp && possibleDown) {
-                return rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
-            } else if (possibleUp) {
-                return Direction.UP;
-            } else if (possibleDown) {
-                return Direction.DOWN;
-            }
-            return Direction.RIGHT;
-        } else if (board.isBulletAt(x, y + delta1)) {
-            boolean possibleUp = possible.possible(me, Direction.UP);
-            boolean possibleDown = possible.possible(me, Direction.DOWN);
-            if (possibleUp && possibleDown) {
-                return rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
-            } else if (possibleUp) {
-                return Direction.UP;
-            } else if (possibleDown) {
-                return Direction.DOWN;
-            }
-            return Direction.LEFT;
+        switch (direction) {
+            case UP:
+                for (Bullet bullet1 : bullets) {
+                    if (bullet1.point.getX() == x && bullet1.point.getY() == (y - delta1)) {
+                        bullet = bullet1;
+                        break;
+                    }
+                }
+                if (bullet != null) {
+                    if (bullet.direction == direction.inverted()) {
+                        if (possibleLeft && possibleRight) {
+                            return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+                        } else if (possibleLeft) {
+                            return Direction.LEFT;
+                        } else if (possibleRight) {
+                            return Direction.RIGHT;
+                        } else {
+                            return Direction.ACT;
+                        }
+                    }
+                }
+
+                for (Bullet bullet1 : bullets) {
+                    if (bullet1.point.getX() == x && bullet1.point.getY() == (y + delta1)) {
+                        bullet = bullet1;
+                        break;
+                    }
+                }
+                if (bullet != null) {
+                    if (bullet.direction == direction) {
+                        if (possibleLeft && possibleRight) {
+                            return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+                        } else if (possibleLeft) {
+                            return Direction.LEFT;
+                        } else if (possibleRight) {
+                            return Direction.RIGHT;
+                        } else {
+                            return Direction.ACT;
+                        }
+                    }
+                }
+                break;
+            case RIGHT:
+                for (Bullet bullet1 : bullets) {
+                    if (bullet1.point.getX() == (x + delta1) && bullet1.point.getY() == y) {
+                        bullet = bullet1;
+                        break;
+                    }
+                }
+                if (bullet != null) {
+                    if (bullet.direction == direction.inverted()) {
+                        if (possibleUp && possibleDown) {
+                            return rnd.nextInt(1) == 0 ? Direction.UP : Direction.DOWN;
+                        } else if (possibleUp) {
+                            return Direction.UP;
+                        } else if (possibleDown) {
+                            return Direction.DOWN;
+                        } else {
+                            return Direction.ACT;
+                        }
+                    }
+                }
+
+                for (Bullet bullet1 : bullets) {
+                    if (bullet1.point.getX() == (x - delta1) && bullet1.point.getY() == y) {
+                        bullet = bullet1;
+                        break;
+                    }
+                }
+                if (bullet != null) {
+                    if (bullet.direction == direction) {
+                        if (possibleUp && possibleDown) {
+                            return rnd.nextInt(1) == 0 ? Direction.UP : Direction.DOWN;
+                        } else if (possibleUp) {
+                            return Direction.UP;
+                        } else if (possibleDown) {
+                            return Direction.DOWN;
+                        } else {
+                            return Direction.ACT;
+                        }
+                    }
+                }
+                break;
+            case LEFT:
+                for (Bullet bullet1 : bullets) {
+                    if (bullet1.point.getX() == (x - delta1) && bullet1.point.getY() == y) {
+                        bullet = bullet1;
+                        break;
+                    }
+                }
+                if (bullet != null) {
+                    if (bullet.direction == direction.inverted()) {
+                        if (possibleUp && possibleDown) {
+                            return rnd.nextInt(1) == 0 ? Direction.UP : Direction.DOWN;
+                        } else if (possibleUp) {
+                            return Direction.UP;
+                        } else if (possibleDown) {
+                            return Direction.DOWN;
+                        } else {
+                            return Direction.ACT;
+                        }
+                    }
+                }
+
+                for (Bullet bullet1 : bullets) {
+                    if (bullet1.point.getX() == (x + delta1) && bullet1.point.getY() == y) {
+                        bullet = bullet1;
+                        break;
+                    }
+                }
+                if (bullet != null) {
+                    if (bullet.direction == direction) {
+                        if (possibleUp && possibleDown) {
+                            return rnd.nextInt(1) == 0 ? Direction.UP : Direction.DOWN;
+                        } else if (possibleUp) {
+                            return Direction.UP;
+                        } else if (possibleDown) {
+                            return Direction.DOWN;
+                        } else {
+                            return Direction.ACT;
+                        }
+                    }
+                }
+                break;
+            case DOWN:
+                for (Bullet bullet1 : bullets) {
+                    if (bullet1.point.getX() == x && bullet1.point.getY() == (y + delta1)) {
+                        bullet = bullet1;
+                        break;
+                    }
+                }
+                if (bullet != null) {
+                    if (bullet.direction == direction.inverted()) {
+                        if (possibleLeft && possibleRight) {
+                            return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+                        } else if (possibleLeft) {
+                            return Direction.LEFT;
+                        } else if (possibleRight) {
+                            return Direction.RIGHT;
+                        } else {
+                            return Direction.ACT;
+                        }
+                    }
+                }
+
+                for (Bullet bullet1 : bullets) {
+                    if (bullet1.point.getX() == x && bullet1.point.getY() == (y - delta1)) {
+                        bullet = bullet1;
+                        break;
+                    }
+                }
+                if (bullet != null) {
+                    if (bullet.direction == direction) {
+                        if (possibleLeft && possibleRight) {
+                            return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+                        } else if (possibleLeft) {
+                            return Direction.LEFT;
+                        } else if (possibleRight) {
+                            return Direction.RIGHT;
+                        } else {
+                            return Direction.ACT;
+                        }
+                    }
+                }
+                break;
         }
+
+        bullet = null;
 
         switch (direction) {
             case DOWN:
-                if ((!new PointImpl(x + delta2, y).isOutOf(size) && board.isBulletAt(x + delta2, y))) {
-                    boolean possibleLeft = possible.possible(me, Direction.LEFT);
-                    boolean possibleRight = possible.possible(me, Direction.RIGHT);
-                    if (possibleLeft && possibleRight) {
-                        return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
-                    } else if (possibleLeft) {
-                        return Direction.LEFT;
-                    } else if (possibleRight) {
-                        return Direction.RIGHT;
+                if ((!new PointImpl(x, y + delta2).isOutOf(size))) {
+
+                    for (Bullet bullet1 : bullets) {
+                        if (bullet1.point.getX() == x && bullet1.point.getY() == (y + delta2)) {
+                            bullet = bullet1;
+                            break;
+                        }
                     }
-                    return Direction.UP;
+
+                    if (bullet != null) {
+                        if (direction == bullet.direction.inverted()) {
+                            if (possibleLeft && possibleRight) {
+                                return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+                            } else if (possibleLeft) {
+                                return Direction.LEFT;
+                            } else if (possibleRight) {
+                                return Direction.RIGHT;
+                            }
+                            return Direction.UP;
+                        }
+                    }
                 }
+                    break;
             case UP:
-                if ((!new PointImpl(x - delta2, y).isOutOf(size) && board.isBulletAt(x - delta2, y))) {
-                    boolean possibleLeft = possible.possible(me, Direction.LEFT);
-                    boolean possibleRight = possible.possible(me, Direction.RIGHT);
-                    if (possibleLeft && possibleRight) {
-                        return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
-                    } else if (possibleLeft) {
-                        return Direction.LEFT;
-                    } else if (possibleRight) {
-                        return Direction.RIGHT;
+                if ((!new PointImpl(x, y - delta2).isOutOf(size))) {
+
+                    for (Bullet bullet1 : bullets) {
+                        if (bullet1.point.getX() == x && bullet1.point.getY() == (y - delta2)) {
+                            bullet = bullet1;
+                            break;
+                        }
                     }
-                    return Direction.DOWN;
+
+                    if (bullet != null) {
+                        if (direction == bullet.direction.inverted()) {
+                            if (possibleLeft && possibleRight) {
+                                return rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+                            } else if (possibleLeft) {
+                                return Direction.LEFT;
+                            } else if (possibleRight) {
+                                return Direction.RIGHT;
+                            }
+                            return Direction.UP;
+                        }
+                    }
                 }
+                break;
             case LEFT:
-                if (board.isBulletAt(x, y - delta1) || (!new PointImpl(x, y - delta2).isOutOf(size) && board.isBulletAt(x, y - delta2))) {
-                    boolean possibleUp = possible.possible(me, Direction.UP);
-                    boolean possibleDown = possible.possible(me, Direction.DOWN);
-                    if (possibleUp && possibleDown) {
-                        return rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
-                    } else if (possibleUp) {
-                        return Direction.UP;
-                    } else if (possibleDown) {
-                        return Direction.DOWN;
+                if ((!new PointImpl(x - delta2, y).isOutOf(size))) {
+
+                    for (Bullet bullet1 : bullets) {
+                        if (bullet1.point.getX() == (x + delta2) && bullet1.point.getY() == y) {
+                            bullet = bullet1;
+                            break;
+                        }
                     }
-                    return Direction.RIGHT;
+
+                    if (bullet != null) {
+                        if (direction == bullet.direction.inverted()) {
+                            if (possibleUp && possibleDown) {
+                                return rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
+                            } else if (possibleUp) {
+                                return Direction.UP;
+                            } else if (possibleDown) {
+                                return Direction.DOWN;
+                            }
+                            return Direction.RIGHT;
+                        }
+                    }
                 }
+                break;
             case RIGHT:
-                if (board.isBulletAt(x, y + delta1) || (!new PointImpl(x, y + delta2).isOutOf(size) && board.isBulletAt(x, y + delta2))) {
-                    boolean possibleUp = possible.possible(me, Direction.UP);
-                    boolean possibleDown = possible.possible(me, Direction.DOWN);
-                    if (possibleUp && possibleDown) {
-                        return rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
-                    } else if (possibleUp) {
-                        return Direction.UP;
-                    } else if (possibleDown) {
-                        return Direction.DOWN;
+                if ((!new PointImpl(x - delta2, y).isOutOf(size))) {
+
+                    for (Bullet bullet1 : bullets) {
+                        if (bullet1.point.getX() == (x - delta2) && bullet1.point.getY() == y) {
+                            bullet = bullet1;
+                            break;
+                        }
                     }
-                    return Direction.LEFT;
+
+                    if (bullet != null) {
+                        if (direction == bullet.direction.inverted()) {
+                            if (possibleUp && possibleDown) {
+                                return rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
+                            } else if (possibleUp) {
+                                return Direction.UP;
+                            } else if (possibleDown) {
+                                return Direction.DOWN;
+                            }
+                            return Direction.LEFT;
+                        }
+                    }
                 }
+                break;
         }
         return direction;
     }
@@ -298,7 +497,10 @@ public class AISolver implements Solver<Board> {
     }
 
     private String act(String command) {
-        return ((command.equals("") ? "" : command + ", ") + "ACT");
+
+        if (command.equals("ACT")) return command;
+
+        return ("ACT, " + (command.equals("") ? "" : command));
     }
 
     /**
@@ -359,22 +561,17 @@ public class AISolver implements Solver<Board> {
      */
     public List<Deikstra.ShortestWay> simNextStage(final Board board) {
         for (Tank tank : board.tanks) {
-
             if (tank.tankType == Tank.TankType.OUR) {
                 continue;
             }
-
             // танки выбирают лучший из путей по Дейкстре
             List<Deikstra.ShortestWay> directions = getDirections(board, tank);
             if (directions != null && !directions.isEmpty()) {
                 tank.act(directions.get(0).direction, board);
-            } else {
-                tank.act(Direction.RIGHT, board);
             }
         }
-        for (Tank tank : board.tanks) {
-            tank.actBullets(board);
-        }
+
+
         // мы получаем все возможные кратчайшие пути
         return getDirections(board);
     }
@@ -383,7 +580,7 @@ public class AISolver implements Solver<Board> {
     public static void main(String[] args) {
         WebSocketRunner.runClient(
                 // paste here board page url from browser after registration
-                "http://localhost:8080/codenjoy-contest/board/player/lol@kek.com?code=2692204611366816317",
+                "http://localhost:8080/codenjoy-contest/board/player/mater_1234@mail.ru?code=2087931698601200491",
                 new AISolver(new RandomDice()),
                 new Board());
     }
