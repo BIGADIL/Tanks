@@ -177,13 +177,13 @@ public class AISolver implements Solver<Board> {
                         down.change(Direction.DOWN);
 
                         if (board.isAnyTankAt(left)) {
-                            bullets.add(new Bullet(x, y, Direction.LEFT));
-                        } else if (board.isAnyTankAt(right)) {
                             bullets.add(new Bullet(x, y, Direction.RIGHT));
+                        } else if (board.isAnyTankAt(right)) {
+                            bullets.add(new Bullet(x, y, Direction.LEFT));
                         } else if (board.isAnyTankAt(up)) {
-                            bullets.add(new Bullet(x, y, Direction.UP));
-                        } else if (board.isAnyTankAt(down)) {
                             bullets.add(new Bullet(x, y, Direction.DOWN));
+                        } else if (board.isAnyTankAt(down)) {
+                            bullets.add(new Bullet(x, y, Direction.UP));
                         } else {
                             System.err.println("AAAAAA");
                             bullets.add(new Bullet(x, y, Direction.DOWN));
