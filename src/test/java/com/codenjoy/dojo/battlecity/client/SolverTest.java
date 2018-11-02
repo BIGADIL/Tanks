@@ -45,7 +45,7 @@ public class SolverTest {
     }
 
     private Board board(String board) {
-        return (Board)new Board().forString(board);
+        return (Board)new Board(null).forString(board);
     }
 
     @Test

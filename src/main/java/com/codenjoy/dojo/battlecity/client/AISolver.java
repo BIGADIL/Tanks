@@ -39,7 +39,7 @@ public class AISolver implements Solver<Board> {
 
     private Deikstra way;
 
-    private final ArrayList<Bullet> bullets = new ArrayList<>();
+    private static final ArrayList<Bullet> bullets = new ArrayList<>();
 
     public AISolver(Dice dice) {
         this.way = new Deikstra();
@@ -60,6 +60,9 @@ public class AISolver implements Solver<Board> {
                 if (board.isOutOfField(nx, ny)) return false;
 
                 if (board.isBarrierAt(nx, ny)) return false;
+
+                if (board.isOurBullet(nx, ny)) return true;
+
                 return !board.isBulletAt(nx, ny);
             }
 
@@ -226,8 +229,7 @@ public class AISolver implements Solver<Board> {
             } else if (possibleRight) {
                 return Direction.RIGHT.toString() + ", ACT";
             } else {
-                System.err.println("AAA");
-                return "ACT";
+                return direction.toString() + ", ACT";
             }
         }
 
@@ -242,8 +244,7 @@ public class AISolver implements Solver<Board> {
             } else if (possibleUp) {
                 return Direction.UP.toString() + ", ACT";
             } else {
-                System.err.println("AAAA");
-                return "ACT";
+                return direction.toString() + ", ACT";
             }
         }
 
@@ -329,8 +330,7 @@ public class AISolver implements Solver<Board> {
                 System.err.println(direction.clockwise().clockwise().clockwise());
                 return direction.clockwise().clockwise().clockwise() + ", ACT";
             } else {
-                System.err.println("AAAA");
-                return "ACT";
+                return direction.toString() + ", ACT";
             }
         }
 
@@ -467,7 +467,7 @@ public class AISolver implements Solver<Board> {
                 // paste here board page url from browser after registration
                 "http://localhost:8080/codenjoy-contest/board/player/lol@kek.com?code=2692204611366816317",
                 new AISolver(new RandomDice()),
-                new Board());
+                new Board(bullets));
     }
 
 }

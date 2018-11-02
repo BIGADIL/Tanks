@@ -41,7 +41,10 @@ public class Board extends AbstractBoard<Elements> {
 
     public ArrayList<Tank> tanks = new ArrayList<>();
 
-    public Board() {
+    public ArrayList<Bullet> bullets;
+
+    public Board(final ArrayList<Bullet> bullets) {
+        this.bullets = bullets;
     }
 
     public void associateTanks() {
@@ -105,6 +108,47 @@ public class Board extends AbstractBoard<Elements> {
                 Elements.TANK_DOWN,
                 Elements.TANK_LEFT,
                 Elements.TANK_RIGHT).isEmpty();
+    }
+
+    public boolean isOurBullet(int x, int y) {
+        Bullet bul = null;
+
+        final PointImpl point = new PointImpl(x, y);
+
+        for (Bullet bullet : bullets) {
+            if (bullet.point.equals(point)) {
+                bul = bullet;
+                break;
+            }
+        }
+
+        if (bul != null) {
+            PointImpl right = point.copy();
+            right.change(Direction.RIGHT);
+            if (isMeAt(right) && bul.direction == null) {
+                return true;
+            }
+
+            PointImpl left = point.copy();
+            left.change(Direction.LEFT);
+            if (isMeAt(left) && bul.direction == null) {
+                return true;
+            }
+
+            PointImpl up = point.copy();
+            up.change(Direction.UP);
+            if (isMeAt(up) && bul.direction == null) {
+                return true;
+            }
+
+            PointImpl down = point.copy();
+            down.change(Direction.DOWN);
+            if (isMeAt(up) && bul.direction == null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public Direction getMyDirection() {
@@ -194,6 +238,10 @@ public class Board extends AbstractBoard<Elements> {
                 Elements.TANK_UP);
     }
 
+    public boolean isMeAt(Point point) {
+        return isMeAt(point.getX(), point.getY());
+    }
+
     public boolean isAITank(int x, int y) {
         return isAt(x, y, Elements.AI_TANK_DOWN,
                 Elements.AI_TANK_LEFT,
@@ -243,7 +291,7 @@ public class Board extends AbstractBoard<Elements> {
      * @return копия борда
      */
     public Board getCopy() {
-        Board board = new Board();
+        Board board = new Board(bullets);
         board.size = size;
         board.field = new char[field.length][][];
         for (int i = 0; i < field.length; i++) {

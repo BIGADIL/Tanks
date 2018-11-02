@@ -68,7 +68,7 @@ public class YourSolver implements Solver<Board> {
                 // paste here board page url from browser after registration
                 "http://142.93.104.159/codenjoy-contest/board/player/test2@example.com?code=13373636131614783155",
                 new YourSolver(new RandomDice()),
-                new Board());
+                new Board(null));
     }
 
 }
