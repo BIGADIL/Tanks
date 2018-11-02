@@ -50,12 +50,6 @@ public class Deikstra {
 
         Collections.sort(paths);
 
-        System.out.println("Ways");
-
-        for (ShortestWay path : paths) {
-            System.out.println(path.direction + ": " + path.weight);
-        }
-
         return paths;
     }
 

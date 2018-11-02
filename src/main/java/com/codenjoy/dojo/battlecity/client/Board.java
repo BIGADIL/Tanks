@@ -25,6 +25,7 @@ package com.codenjoy.dojo.battlecity.client;
 
 import com.codenjoy.dojo.battlecity.model.*;
 import com.codenjoy.dojo.client.AbstractBoard;
+import com.codenjoy.dojo.services.Direction;
 import com.codenjoy.dojo.services.Point;
 import com.codenjoy.dojo.services.PointImpl;
 import com.codenjoy.dojo.services.algs.DeikstraFindWay;
@@ -48,20 +49,15 @@ public class Board extends AbstractBoard<Elements> {
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 PointImpl point = new PointImpl(i, j);
-                if (isAt(point, Elements.AI_TANK_DOWN, Elements.AI_TANK_LEFT, Elements.AI_TANK_RIGHT, Elements.AI_TANK_UP)) {
+                if (isAITank(i, j)) {
                     tanks.add(new Tank(point, Tank.TankType.AI));
-                } else if (isAt(point, Elements.OTHER_TANK_LEFT, Elements.OTHER_TANK_DOWN, Elements.OTHER_TANK_RIGHT, Elements.OTHER_TANK_UP)) {
+                } else if (isOtherTank(i, j)) {
                     tanks.add(new Tank(point, Tank.TankType.OTHER));
-                } else if (isAt(point, Elements.TANK_DOWN, Elements.TANK_LEFT, Elements.TANK_RIGHT, Elements.TANK_UP)) {
+                } else if (isMeAt(i, j)) {
                     tanks.add(new Tank(point, Tank.TankType.OUR));
                 }
             }
         }
-        System.out.println("Tanks:" + tanks.size());
-
-        System.err.println(field.length);
-        System.err.println(field[0].length);
-        System.err.println(field[0][0].length);
     }
 
     @Override
@@ -110,6 +106,23 @@ public class Board extends AbstractBoard<Elements> {
                 Elements.TANK_LEFT,
                 Elements.TANK_RIGHT).isEmpty();
     }
+
+    public Direction getMyDirection() {
+        final Point me = getMe();
+
+        switch (getAt(me)) {
+            case TANK_UP:
+                return Direction.UP;
+            case TANK_DOWN:
+                return Direction.DOWN;
+            case TANK_LEFT:
+                return Direction.LEFT;
+            case TANK_RIGHT:
+                return Direction.RIGHT;
+        }
+        return null;
+    }
+
 
     public boolean isBulletAt(int x, int y) {
         return getAt(x, y).equals(Elements.BULLET);

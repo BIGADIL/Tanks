@@ -29,7 +29,9 @@ import com.codenjoy.dojo.client.Solver;
 import com.codenjoy.dojo.client.WebSocketRunner;
 import com.codenjoy.dojo.services.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class AISolver implements Solver<Board> {
 
@@ -75,12 +77,8 @@ public class AISolver implements Solver<Board> {
 
         if (board.isGameOver()) return act("");
 
-        for (Bullet bullet : bullets) {
-            bullet.Acted(board);
-        }
-        bullets.removeIf(x -> x.isDead);
+        dumpBullets(board);
 
-        rememberBullets(board);
 
         List<Deikstra.ShortestWay> directions = getDirections(board);
         if (directions == null || directions.isEmpty()) {
@@ -145,49 +143,24 @@ public class AISolver implements Solver<Board> {
         return action;
     }
 
-
-
-    public void rememberBullets(Board board) {
+    private void dumpBullets(Board board) {
+        for (final Bullet bullet : bullets) {
+            bullet.Acted(board);
+        }
+        bullets.removeIf(x -> x.isDead);
 
         for (int x = 0; x < board.size(); x++) {
             for (int y = 0; y < board.size(); y++) {
-
-                PointImpl me = new PointImpl(x, y);
-
                 if (board.isBulletAt(x, y)) {
                     boolean isExist = false;
-                    for (Bullet bullet : bullets) {
+                    for (final Bullet bullet : bullets) {
                         if (bullet.point.getX() == x && bullet.point.getY() == y) {
                             isExist = true;
                             break;
                         }
                     }
                     if (!isExist) {
-
-                        PointImpl right = me.copy();
-                        right.change(Direction.RIGHT);
-
-                        PointImpl left = me.copy();
-                        left.change(Direction.LEFT);
-
-                        PointImpl up = me.copy();
-                        up.change(Direction.UP);
-
-                        PointImpl down = me.copy();
-                        down.change(Direction.DOWN);
-
-                        if (board.isAnyTankAt(left)) {
-                            bullets.add(new Bullet(x, y, Direction.RIGHT));
-                        } else if (board.isAnyTankAt(right)) {
-                            bullets.add(new Bullet(x, y, Direction.LEFT));
-                        } else if (board.isAnyTankAt(up)) {
-                            bullets.add(new Bullet(x, y, Direction.DOWN));
-                        } else if (board.isAnyTankAt(down)) {
-                            bullets.add(new Bullet(x, y, Direction.UP));
-                        } else {
-                            System.err.println("AAAAAA");
-                            bullets.add(new Bullet(x, y, Direction.DOWN));
-                        }
+                        bullets.add(new Bullet(x, y));
                     }
                 }
             }
@@ -205,16 +178,8 @@ public class AISolver implements Solver<Board> {
      */
     public String patchByBullet(Direction direction, Board board) {
         Point me = board.getMe();
-        int x = me.getX();
-        int y = me.getY();
-
-        int size = board.size();
 
         Deikstra.Possible possible = possible(board);
-
-        int delta1 = 1;
-        int delta2 = 2;
-        int delta3 = 3;
 
         boolean possibleLeft = possible.possible(me, Direction.LEFT);
         boolean possibleRight = possible.possible(me, Direction.RIGHT);
@@ -250,402 +215,126 @@ public class AISolver implements Solver<Board> {
             }
         }
 
-        if ((tmpUp != null && direction.inverted() == tmpUp.direction) || (tmpDown != null && direction.inverted() == tmpDown.direction)) {
-            Direction d;
+        if ((tmpUp != null && tmpUp.direction != null && tmpUp.direction == Direction.DOWN) || (tmpDown != null && tmpDown.direction != null && tmpDown.direction == Direction.UP)
+                && (direction == Direction.DOWN || direction == Direction.UP)
+        ) {
             if (possibleLeft && possibleRight) {
-                d = rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+                final Direction dir = rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
+                return dir + ", ACT";
             } else if (possibleLeft) {
-                d = Direction.LEFT;
+                return Direction.LEFT.toString() + ", ACT";
             } else if (possibleRight) {
-                d = Direction.RIGHT;
+                return Direction.RIGHT.toString() + ", ACT";
             } else {
+                System.err.println("AAA");
                 return "ACT";
             }
-            return d.toString() + ", ACT";
         }
 
-        if ((tmpLeft != null && direction.inverted() == tmpLeft.direction) || (tmpRight != null && direction.inverted() == tmpRight.direction)) {
-            Direction d;
-            if (possibleUp && possibleDown) {
-                d = rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
+        if ((tmpLeft != null && tmpLeft.direction != null && tmpLeft.direction == Direction.RIGHT) || (tmpRight != null && tmpRight.direction != null && tmpRight.direction == Direction.LEFT)
+                && (direction == Direction.LEFT || direction == Direction.RIGHT)
+        ) {
+            if (possibleDown && possibleUp) {
+                final Direction dir = rnd.nextInt(1) == 0 ? Direction.UP : Direction.DOWN;
+                return dir + ", ACT";
             } else if (possibleDown) {
-                d = Direction.DOWN;
+                return Direction.DOWN.toString() + ", ACT";
             } else if (possibleUp) {
-                d = Direction.UP;
+                return Direction.UP.toString() + ", ACT";
             } else {
+                System.err.println("AAAA");
                 return "ACT";
             }
-            return d.toString() + ", ACT";
+        }
+
+        return doubleDir(direction, board);
+    }
+
+    String doubleDir(Direction direction, Board board) {
+        final Point me = board.getMe();
+
+        final PointImpl futurePoint = me.copy();
+
+        me.change(futurePoint);
+
+        final Deikstra.Possible possible = possible(board);
+
+        final PointImpl byDirection1 = futurePoint.copy();
+        byDirection1.change(direction);
+
+        final PointImpl byDirection2 = futurePoint.copy();
+        byDirection2.change(direction);
+        byDirection2.change(direction);
+
+        final PointImpl byClockWise1 = futurePoint.copy();
+        byClockWise1.change(direction.clockwise());
+
+        final PointImpl byClockWise2 = futurePoint.copy();
+        byClockWise2.change(direction.clockwise());
+        byClockWise2.change(direction.clockwise());
+
+        final PointImpl againstClockWise1 = futurePoint.copy();
+        againstClockWise1.change(direction.clockwise().clockwise().clockwise());
+
+        final PointImpl againstClockWise2 = futurePoint.copy();
+        againstClockWise2.change(direction.clockwise().clockwise().clockwise());
+        againstClockWise2.change(direction.clockwise().clockwise().clockwise());
+
+        Bullet byDir1 = null;
+        Bullet byDir2 = null;
+
+        Bullet byClock1 = null;
+        Bullet byClock2 = null;
+
+        Bullet agClock1 = null;
+        Bullet agClock2 = null;
+
+
+        for (Bullet bullet : bullets) {
+            if (bullet.point.equals(byDirection1)) {
+                byDir1 = bullet;
+            } else if (bullet.point.equals(byDirection2)) {
+                byDir2 = bullet;
+            } else if (bullet.point.equals(byClockWise1)) {
+                byClock1 = bullet;
+            } else if (bullet.point.equals(byClockWise2)) {
+                byClock2 = bullet;
+            } else if (bullet.point.equals(againstClockWise1)) {
+                agClock1 = bullet;
+            } else if (bullet.point.equals(againstClockWise2)) {
+                agClock2 = bullet;
+            }
         }
 
 
-        switch (direction) {
 
-            case UP:
-                PointImpl up2 = me.copy();
-                up2.change(Direction.UP);
-                up2.change(Direction.UP);
+        if (byDir1 != null && (byDir1.direction != null || byDir1.direction == direction.inverted()) ||
+                byDir2 != null && (byDir2.direction != null || byDir2.direction == direction.inverted()) ||
+                byClock1 != null && (byClock1.direction != null || byClock1.direction == direction.clockwise().clockwise().clockwise()) ||
+                byClock2 != null && (byClock2.direction != null || byClock2.direction == direction.clockwise().clockwise().clockwise()) ||
+                agClock1 != null && (agClock1.direction != null || agClock1.direction == direction.clockwise()) ||
+                agClock2 != null && (agClock2.direction != null || agClock2.direction == direction.clockwise())
+        ) {
+            final boolean clock = possible.possible(me, direction.clockwise());
+            final boolean agClock = possible.possible(me, direction.clockwise().clockwise().clockwise());
 
-                PointImpl up3 = me.copy();
-                up3.change(Direction.UP);
-                up3.change(Direction.UP);
-                up3.change(Direction.UP);
-
-                PointImpl left1 = me.copy();
-                left1.change(Direction.LEFT);
-                left1.change(Direction.UP);
-
-                PointImpl left2 = me.copy();
-                left2.change(Direction.LEFT);
-                left2.change(Direction.LEFT);
-                left2.change(Direction.UP);
-
-
-                PointImpl right1 = me.copy();
-                right1.change(Direction.RIGHT);
-                right1.change(Direction.UP);
-
-                PointImpl right2 = me.copy();
-                right2.change(Direction.RIGHT);
-                right2.change(Direction.RIGHT);
-                right2.change(Direction.UP);
-
-
-                Bullet tmpUp2 = null;
-                Bullet tmpUp3 = null;
-
-                if (!up2.isOutOf(size) || !up3.isOutOf(size)) {
-                    for (Bullet bullet : bullets) {
-                        if (bullet.point.equals(up2)) {
-                            tmpUp2 = bullet;
-                        } else if (bullet.point.equals(up3)) {
-                            tmpUp3 = bullet;
-                        }
-                    }
-                    if ((tmpUp2 != null && tmpUp2.direction == Direction.DOWN) || (tmpUp3 != null && tmpUp3.direction == Direction.DOWN)) {
-                        Direction d;
-                        if (possibleLeft && possibleRight) {
-                            d =  rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
-                        } else if (possibleLeft) {
-                            d =  Direction.LEFT;
-                        } else if (possibleRight) {
-                            d =  Direction.RIGHT;
-                        } else {
-                            return "ACT";
-                        }
-                        return "ACT, " + d.toString();
-                    }
-                }
-
-
-                Bullet tmpLeft1 = null;
-                Bullet tmpLeft2 = null;
-                Bullet tmpRight1 = null;
-                Bullet tmpRight2 = null;
-
-                if (!left1.isOutOf(size) || !left1.isOutOf(size) || !right1.isOutOf(size) || !right2.isOutOf(size)) {
-                    for (Bullet bullet : bullets) {
-                        if (bullet.point.equals(left1)) {
-                            tmpLeft1 = bullet;
-                        } else if (bullet.point.equals(left2)) {
-                            tmpLeft2 = bullet;
-                        } else if (bullet.point.equals(right1)) {
-                            tmpRight1 = bullet;
-                        } else if (bullet.point.equals(right2)) {
-                            tmpRight2 = bullet;
-                        }
-                    }
-                    if ((tmpLeft1 != null && tmpLeft1.direction == Direction.RIGHT) || (tmpLeft2 != null && tmpLeft2.direction == Direction.RIGHT) ||
-                            (tmpRight1 != null && tmpRight1.direction == Direction.LEFT) || (tmpRight2 != null && tmpRight2.direction == Direction.LEFT) ) {
-                        Direction d;
-                        if (possibleLeft && possibleRight) {
-                            d =  rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
-                        } else if (possibleLeft) {
-                            d =  Direction.LEFT;
-                        } else if (possibleRight) {
-                            d =  Direction.RIGHT;
-                        } else {
-                            return "ACT";
-                        }
-                        return "ACT, " + d.toString();
-                    }
-                }
-                break;
-            case DOWN:
-                PointImpl down2 = me.copy();
-                down2.change(Direction.DOWN);
-                down2.change(Direction.DOWN);
-
-                PointImpl down3 = me.copy();
-                down3.change(Direction.DOWN);
-                down3.change(Direction.DOWN);
-                down3.change(Direction.DOWN);
-
-                left1 = me.copy();
-                left1.change(Direction.LEFT);
-                left1.change(Direction.DOWN);
-
-                left2 = me.copy();
-                left2.change(Direction.LEFT);
-                left2.change(Direction.LEFT);
-                left2.change(Direction.DOWN);
-
-                right1 = me.copy();
-                right1.change(Direction.RIGHT);
-                right1.change(Direction.DOWN);
-
-                right2 = me.copy();
-                right2.change(Direction.RIGHT);
-                right2.change(Direction.RIGHT);
-                right2.change(Direction.DOWN);
-
-                Bullet tmpDown2 = null;
-                Bullet tmpDown3 = null;
-
-                if (!down2.isOutOf(size) || !down3.isOutOf(size)) {
-                    for (Bullet bullet : bullets) {
-                        if (bullet.point.equals(down2)) {
-                            tmpDown2 = bullet;
-                        } else if (bullet.point.equals(down3)) {
-                            tmpDown3 = bullet;
-                        }
-                    }
-                    if ((tmpDown2 != null && tmpDown2.direction == Direction.UP) || (tmpDown3 != null && tmpDown3.direction == Direction.UP)) {
-                        Direction d;
-                        if (possibleLeft && possibleRight) {
-                            d =  rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
-                        } else if (possibleLeft) {
-                            d =  Direction.LEFT;
-                        } else if (possibleRight) {
-                            d =  Direction.RIGHT;
-                        } else {
-                            return "ACT";
-                        }
-                        return "ACT, " + d.toString();
-                    }
-                }
-
-
-                tmpLeft1 = null;
-                tmpLeft2 = null;
-                tmpRight1 = null;
-                tmpRight2 = null;
-
-                if (!left1.isOutOf(size) || !left1.isOutOf(size) || !right1.isOutOf(size) || !right2.isOutOf(size)) {
-                    for (Bullet bullet : bullets) {
-                        if (bullet.point.equals(left1)) {
-                            tmpLeft1 = bullet;
-                        } else if (bullet.point.equals(left2)) {
-                            tmpLeft2 = bullet;
-                        } else if (bullet.point.equals(right1)) {
-                            tmpRight1 = bullet;
-                        } else if (bullet.point.equals(right2)) {
-                            tmpRight2 = bullet;
-                        }
-                    }
-                    if ((tmpLeft1 != null && tmpLeft1.direction == Direction.RIGHT) || (tmpLeft2 != null && tmpLeft2.direction == Direction.RIGHT) ||
-                            (tmpRight1 != null && tmpRight1.direction == Direction.LEFT) || (tmpRight2 != null && tmpRight2.direction == Direction.LEFT) ) {
-                        Direction d;
-                        if (possibleLeft && possibleRight) {
-                            d =  rnd.nextInt(1) == 0 ? Direction.LEFT : Direction.RIGHT;
-                        } else if (possibleRight) {
-                            d =  Direction.RIGHT;
-                        } else if (possibleLeft) {
-                            d =  Direction.LEFT;
-                        } else {
-                            return "ACT";
-                        }
-                        return "ACT, " + d.toString();
-                    }
-                }
-                break;
-
-            case LEFT:
-                left2 = me.copy();
-                left2.change(Direction.LEFT);
-                left2.change(Direction.LEFT);
-                left2.change(Direction.LEFT);
-
-                PointImpl left3 = me.copy();
-                left3.change(Direction.LEFT);
-                left3.change(Direction.LEFT);
-                left3.change(Direction.LEFT);
-
-
-                PointImpl up1 = me.copy();
-                up1.change(Direction.UP);
-                up1.change(Direction.LEFT);
-
-
-                up2 = me.copy();
-                up2.change(Direction.UP);
-                up2.change(Direction.UP);
-                up2.change(Direction.LEFT);
-
-                PointImpl down1 = me.copy();
-                down1.change(Direction.DOWN);
-                down1.change(Direction.LEFT);
-
-
-                down2 = me.copy();
-                down2.change(Direction.DOWN);
-                down2.change(Direction.DOWN);
-                down2.change(Direction.LEFT);
-
-                tmpLeft2 = null;
-                Bullet tmpLeft3 = null;
-
-                if (!left2.isOutOf(size) || !left3.isOutOf(size)) {
-                    for (Bullet bullet : bullets) {
-                        if (bullet.point.equals(left2)) {
-                            tmpLeft2 = bullet;
-                        } else if (bullet.point.equals(left3)) {
-                            tmpLeft3 = bullet;
-                        }
-                    }
-                    if ((tmpLeft2 != null && tmpLeft2.direction == Direction.RIGHT) || (tmpLeft3 != null && tmpLeft3.direction == Direction.RIGHT)) {
-                        Direction d;
-                        if (possibleUp && possibleDown) {
-                            d =  rnd.nextInt(1) == 0 ? Direction.UP : Direction.DOWN;
-                        } else if (possibleUp) {
-                            d =  Direction.UP;
-                        } else if (possibleDown) {
-                            d =  Direction.DOWN;
-                        } else {
-                            return "ACT";
-                        }
-                        return "ACT, " + d.toString();
-                    }
-                }
-
-
-                Bullet tmpUp1 = null;
-                tmpUp2 = null;
-                Bullet tmpDown1 = null;
-                tmpDown2 = null;
-
-                if (!up1.isOutOf(size) || !up2.isOutOf(size) || !down1.isOutOf(size) || !down2.isOutOf(size)) {
-                    for (Bullet bullet : bullets) {
-                        if (bullet.point.equals(up1)) {
-                            tmpUp1 = bullet;
-                        } else if (bullet.point.equals(up2)) {
-                            tmpUp2 = bullet;
-                        } else if (bullet.point.equals(down1)) {
-                            tmpDown1 = bullet;
-                        } else if (bullet.point.equals(down2)) {
-                            tmpDown2 = bullet;
-                        }
-                    }
-                    if ((tmpUp1 != null && tmpUp1.direction == Direction.DOWN) || (tmpUp2 != null && tmpUp2.direction == Direction.DOWN) ||
-                            (tmpDown1 != null && tmpDown1.direction == Direction.UP) || (tmpDown2 != null && tmpDown2.direction == Direction.UP) ) {
-                        Direction d;
-                        if (possibleUp && possibleDown) {
-                            d =  rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
-                        } else if (possibleDown) {
-                            d =  Direction.DOWN;
-                        } else if (possibleRight) {
-                            d =  Direction.RIGHT;
-                        } else {
-                            return "ACT";
-                        }
-                        return "ACT, " + d.toString();
-                    }
-                }
-                break;
-
-            case RIGHT:
-
-                right2 = me.copy();
-                right2.change(Direction.RIGHT);
-                right2.change(Direction.RIGHT);
-
-                PointImpl right3 = me.copy();
-                right3.change(Direction.RIGHT);
-                right3.change(Direction.RIGHT);
-                right3.change(Direction.RIGHT);
-
-
-                up1 = me.copy();
-                up1.change(Direction.UP);
-                up1.change(Direction.RIGHT);
-
-                up2 = me.copy();
-                up2.change(Direction.UP);
-                up2.change(Direction.UP);
-                up2.change(Direction.RIGHT);
-
-                down1 = me.copy();
-                down1.change(Direction.DOWN);
-                down1.change(Direction.RIGHT);
-
-                down2 = me.copy();
-                down2.change(Direction.DOWN);
-                down2.change(Direction.DOWN);
-                down2.change(Direction.RIGHT);
-
-                tmpRight2 = null;
-                Bullet tmpRight3 = null;
-
-                if (!right2.isOutOf(size) || !right3.isOutOf(size)) {
-                    for (Bullet bullet : bullets) {
-                        if (bullet.point.equals(right2)) {
-                            tmpRight2 = bullet;
-                        } else if (bullet.point.equals(right3)) {
-                            tmpRight3 = bullet;
-                        }
-                    }
-                    if ((tmpRight2 != null && tmpRight2.direction == Direction.LEFT) || (tmpRight3 != null && tmpRight3.direction == Direction.LEFT)) {
-                        Direction d;
-                        if (possibleUp && possibleDown) {
-                            d =  rnd.nextInt(1) == 0 ? Direction.UP : Direction.DOWN;
-                        } else if (possibleUp) {
-                            d =  Direction.UP;
-                        } else if (possibleDown) {
-                            d =  Direction.DOWN;
-                        } else {
-                            return "ACT";
-                        }
-                        return "ACT, " + d.toString();
-                    }
-                }
-
-
-                tmpUp1 = null;
-                tmpUp2 = null;
-                tmpDown1 = null;
-                tmpDown2 = null;
-
-                if (!up1.isOutOf(size) || !up2.isOutOf(size) || !down1.isOutOf(size) || !down2.isOutOf(size)) {
-                    for (Bullet bullet : bullets) {
-                        if (bullet.point.equals(up1)) {
-                            tmpUp1 = bullet;
-                        } else if (bullet.point.equals(up2)) {
-                            tmpUp2 = bullet;
-                        } else if (bullet.point.equals(down1)) {
-                            tmpDown1 = bullet;
-                        } else if (bullet.point.equals(down2)) {
-                            tmpDown2 = bullet;
-                        }
-                    }
-                    if ((tmpUp1 != null && tmpUp1.direction == Direction.DOWN) || (tmpUp2 != null && tmpUp2.direction == Direction.DOWN) ||
-                            (tmpDown1 != null && tmpDown1.direction == Direction.UP) || (tmpDown2 != null && tmpDown2.direction == Direction.UP) ) {
-                        Direction d;
-                        if (possibleUp && possibleDown) {
-                            d =  rnd.nextInt(1) == 0 ? Direction.DOWN : Direction.UP;
-                        } else if (possibleDown) {
-                            d =  Direction.DOWN;
-                        } else if (possibleRight) {
-                            d =  Direction.RIGHT;
-                        } else {
-                            return "ACT";
-                        }
-                        return "ACT, " + d.toString();
-                    }
-                }
-                break;
+            if (clock && agClock) {
+                final Direction futureDir = rnd.nextInt(1) == 0 ? direction.clockwise() : direction.clockwise().clockwise();
+                System.err.println(futureDir);
+                return futureDir.toString() + ", ACT";
+            } else if (clock) {
+                System.err.println(direction.clockwise());
+                return direction.clockwise().toString() + ", ACT";
+            } else if (agClock) {
+                System.err.println(direction.clockwise().clockwise().clockwise());
+                return direction.clockwise().clockwise().clockwise() + ", ACT";
+            } else {
+                System.err.println("AAAA");
+                return "ACT";
+            }
         }
 
-        return "ACT, " + direction.toString() ;
+        return "ACT, " + direction.toString();
     }
 
     /**
@@ -679,12 +368,6 @@ public class AISolver implements Solver<Board> {
                     break;
             }
         }
-
-        System.out.println();
-        for (int i = 0; i < totalDirection.length; i++) {
-            System.out.println(i + " " + totalDirection[i].direction + ": " + totalDirection[i].weight);
-        }
-
 
         if (totalDirection[0].weight > totalDirection[1].weight &&
                 totalDirection[0].weight > totalDirection[2].weight &&
@@ -782,7 +465,7 @@ public class AISolver implements Solver<Board> {
     public static void main(String[] args) {
         WebSocketRunner.runClient(
                 // paste here board page url from browser after registration
-                "http://localhost:8080/codenjoy-contest/board/player/mater_1234@mail.ru?code=2087931698601200491",
+                "http://localhost:8080/codenjoy-contest/board/player/lol@kek.com?code=2692204611366816317",
                 new AISolver(new RandomDice()),
                 new Board());
     }
